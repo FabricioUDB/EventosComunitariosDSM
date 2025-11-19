@@ -1,4 +1,4 @@
-package com.example.controlgastos.ui.theme
+package com.example.eventoscomunitarios.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

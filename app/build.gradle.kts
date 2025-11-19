@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.controlgastos"
+    namespace = "com.example.eventoscomunitarios"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.controlgastos"
+        applicationId = "com.example.eventoscomunitarios"
         minSdk = 24
         targetSdk = 36
         versionCode = 1

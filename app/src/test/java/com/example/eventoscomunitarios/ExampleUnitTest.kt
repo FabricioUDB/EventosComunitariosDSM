@@ -1,4 +1,4 @@
-package com.example.controlgastos
+package com.example.eventoscomunitarios
 
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package com.example.controlgastos
+package com.example.eventoscomunitarios
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4
