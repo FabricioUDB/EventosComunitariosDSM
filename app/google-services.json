@@ -59,6 +59,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "419858579368-p3q9uks70nrg8s3os41djf1d51m7e448.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.eventoscomunitarios",
+            "certificate_hash": "53c5c1c7450ee980903377ff9f8c6b3577668d6e"
+          }
+        },
+        {
           "client_id": "419858579368-h0cj0k2546d1p11cufl91bn4e359iv3r.apps.googleusercontent.com",
           "client_type": 3
         }

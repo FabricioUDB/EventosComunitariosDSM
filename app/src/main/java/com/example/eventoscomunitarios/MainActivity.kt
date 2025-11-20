@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -413,7 +414,7 @@ private fun RegisterScreen(
 @Composable
 private fun HomeScreen(vm: EventsViewModel, onLogout: () -> Unit) {
     var tabIndex by remember { mutableStateOf(0) }
-    val tabs = listOf("Todos los Eventos", "Mis Eventos")
+    val tabs = listOf("Próximos", "Mis Eventos", "Historial")
 
     Scaffold(
         topBar = {
@@ -441,6 +442,7 @@ private fun HomeScreen(vm: EventsViewModel, onLogout: () -> Unit) {
             when (tabIndex) {
                 0 -> EventosListScreen(vm)
                 1 -> MisEventosScreen(vm)
+                2 -> HistorialScreen(vm)
             }
         }
     }
@@ -562,6 +564,70 @@ fun MisEventosScreen(vm: EventsViewModel) {
                 }
             }
         }
+    }
+}
+
+@Composable
+fun HistorialScreen(vm: EventsViewModel) {
+    val eventosPasados by vm.eventosPasados.collectAsState()
+    val ui by vm.ui.collectAsState()
+    var eventoSeleccionado by remember { mutableStateOf<Evento?>(null) }
+
+    LaunchedEffect(Unit) {
+        vm.cargarEventosPasados()
+    }
+
+    when {
+        ui is UiState.Loading && eventosPasados.isEmpty() -> {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        }
+        eventosPasados.isEmpty() -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    Icons.Default.DateRange,
+                    contentDescription = null,
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "No hay eventos pasados",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        else -> {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(eventosPasados, key = { it.id }) { evento ->
+                    EventoPasadoCard(
+                        evento = evento,
+                        vm = vm,
+                        onClick = { eventoSeleccionado = evento }
+                    )
+                }
+            }
+        }
+    }
+
+    eventoSeleccionado?.let { evento ->
+        DetalleEventoDialog(
+            evento = evento,
+            vm = vm,
+            onDismiss = { eventoSeleccionado = null }
+        )
     }
 }
 
@@ -777,6 +843,426 @@ fun MiEventoCard(evento: Evento, vm: EventsViewModel) {
                 }
             }
         )
+    }
+}
+
+@Composable
+fun EventoPasadoCard(evento: Evento, vm: EventsViewModel, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = onClick
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        evento.titulo,
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = RoundedCornerShape(4.dp),
+                        modifier = Modifier.padding(vertical = 4.dp)
+                    ) {
+                        Text(
+                            evento.categoria,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    }
+                }
+
+                if (evento.totalCalificaciones > 0) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                String.format("%.1f", evento.calificacionPromedio),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Text(
+                            "${evento.totalCalificaciones} opiniones",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Info,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    vm.formatearFecha(evento.fecha),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (evento.ubicacion.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        evento.ubicacion,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                "${evento.participantes.size} personas asistieron",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+
+            if (vm.estaInscrito(evento) && !vm.yaComentaste(evento.id)) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "👉 Toca para calificar este evento",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DetalleEventoDialog(evento: Evento, vm: EventsViewModel, onDismiss: () -> Unit) {
+    val comentarios by vm.comentariosEvento.collectAsState()
+    val estaInscrito = vm.estaInscrito(evento)
+    val yaComentaste = vm.yaComentaste(evento.id)
+    var mostrarFormComentario by remember { mutableStateOf(false) }
+
+    LaunchedEffect(evento.id) {
+        vm.cargarComentarios(evento.id)
+    }
+
+    AlertDialog(onDismissRequest = onDismiss) {
+        Card(modifier = Modifier.fillMaxWidth()) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 600.dp)
+                    .padding(24.dp)
+            ) {
+                item {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                evento.titulo,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                evento.categoria,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        IconButton(onClick = onDismiss) {
+                            Icon(Icons.Default.Close, "Cerrar")
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // Calificación promedio
+                    if (evento.totalCalificaciones > 0) {
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Star,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    String.format("%.1f", evento.calificacionPromedio),
+                                    style = MaterialTheme.typography.displaySmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "(${evento.totalCalificaciones})",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    // Botón para agregar comentario
+                    if (estaInscrito && !yaComentaste) {
+                        Button(
+                            onClick = { mostrarFormComentario = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(Icons.Default.Star, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Calificar este evento")
+                        }
+                        Spacer(Modifier.height(16.dp))
+                    } else if (yaComentaste) {
+                        Text(
+                            "✅ Ya has calificado este evento",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                        Spacer(Modifier.height(16.dp))
+                    }
+
+                    // Título de comentarios
+                    Text(
+                        "Comentarios (${comentarios.size})",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                // Lista de comentarios
+                items(comentarios, key = { it.id }) { comentario ->
+                    ComentarioCard(
+                        comentario = comentario,
+                        vm = vm,
+                        eventoId = evento.id
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                if (comentarios.isEmpty()) {
+                    item {
+                        Text(
+                            "No hay comentarios aún",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (mostrarFormComentario) {
+        AgregarComentarioDialog(
+            eventoId = evento.id,
+            vm = vm,
+            onDismiss = { mostrarFormComentario = false }
+        )
+    }
+}
+
+@Composable
+fun ComentarioCard(comentario: Comentario, vm: EventsViewModel, eventoId: String) {
+    val currentUser = vm.user.collectAsState().value
+    val esPropio = currentUser?.uid == comentario.usuarioId
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = if (esPropio)
+                MaterialTheme.colorScheme.primaryContainer
+            else
+                MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        comentario.nombreUsuario,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        repeat(5) { index ->
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp),
+                                tint = if (index < comentario.calificacion)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
+                    }
+                }
+
+                if (esPropio) {
+                    IconButton(
+                        onClick = { vm.eliminarComentario(eventoId, comentario.id) },
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Eliminar",
+                            modifier = Modifier.size(18.dp),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Text(
+                comentario.comentario,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(Modifier.height(4.dp))
+
+            Text(
+                vm.formatearFecha(comentario.fecha),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AgregarComentarioDialog(eventoId: String, vm: EventsViewModel, onDismiss: () -> Unit) {
+    var comentario by remember { mutableStateOf("") }
+    var calificacion by remember { mutableStateOf(5) }
+
+    AlertDialog(onDismissRequest = onDismiss) {
+        Card {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp)
+            ) {
+                Text(
+                    "Calificar Evento",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                Text(
+                    "Tu calificación:",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    repeat(5) { index ->
+                        IconButton(onClick = { calificacion = index + 1 }) {
+                            Icon(
+                                Icons.Default.Star,
+                                contentDescription = null,
+                                modifier = Modifier.size(40.dp),
+                                tint = if (index < calificacion)
+                                    MaterialTheme.colorScheme.primary
+                                else
+                                    MaterialTheme.colorScheme.outlineVariant
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = comentario,
+                    onValueChange = { comentario = it },
+                    label = { Text("Tu comentario") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 4,
+                    minLines = 3
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancelar")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            vm.agregarComentario(eventoId, comentario, calificacion)
+                            onDismiss()
+                        },
+                        enabled = comentario.isNotBlank()
+                    ) {
+                        Text("Publicar")
+                    }
+                }
+            }
+        }
     }
 }
 

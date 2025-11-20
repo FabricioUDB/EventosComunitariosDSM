@@ -27,7 +27,20 @@ data class Evento(
     val organizadorId: String = "",
     val participantes: List<String> = emptyList(),
     val maxParticipantes: Int = 0,
-    val createdAt: Timestamp = Timestamp.now()
+    val createdAt: Timestamp = Timestamp.now(),
+    val calificacionPromedio: Double = 0.0,
+    val totalCalificaciones: Int = 0
+)
+
+// --- Modelo de Comentario ---
+data class Comentario(
+    val id: String = "",
+    val eventoId: String = "",
+    val usuarioId: String = "",
+    val nombreUsuario: String = "",
+    val comentario: String = "",
+    val calificacion: Int = 0,
+    val fecha: Timestamp = Timestamp.now()
 )
 
 // --- Estados de UI ---
@@ -56,6 +69,12 @@ class EventsViewModel : ViewModel() {
 
     private val _misEventos = MutableStateFlow<List<Evento>>(emptyList())
     val misEventos: StateFlow<List<Evento>> = _misEventos.asStateFlow()
+
+    private val _eventosPasados = MutableStateFlow<List<Evento>>(emptyList())
+    val eventosPasados: StateFlow<List<Evento>> = _eventosPasados.asStateFlow()
+
+    private val _comentariosEvento = MutableStateFlow<List<Comentario>>(emptyList())
+    val comentariosEvento: StateFlow<List<Comentario>> = _comentariosEvento.asStateFlow()
 
     // Categorías de eventos
     val categoriasEventos = listOf(
@@ -135,6 +154,8 @@ class EventsViewModel : ViewModel() {
         _user.value = null
         _eventos.value = emptyList()
         _misEventos.value = emptyList()
+        _eventosPasados.value = emptyList()
+        _comentariosEvento.value = emptyList()
         _ui.value = UiState.Idle
     }
 
@@ -145,6 +166,9 @@ class EventsViewModel : ViewModel() {
     }
 
     private fun eventosRef() = db.collection("eventos")
+
+    private fun comentariosRef(eventoId: String) =
+        db.collection("eventos").document(eventoId).collection("comentarios")
 
     // ---------- OPERACIONES CRUD ----------
     fun crearEvento(
@@ -183,7 +207,9 @@ class EventsViewModel : ViewModel() {
             "organizadorId" to user.uid,
             "participantes" to emptyList<String>(),
             "maxParticipantes" to max,
-            "createdAt" to Timestamp.now()
+            "createdAt" to Timestamp.now(),
+            "calificacionPromedio" to 0.0,
+            "totalCalificaciones" to 0
         )
 
         runCatching { eventosRef().add(data).await() }
@@ -200,7 +226,9 @@ class EventsViewModel : ViewModel() {
         _ui.value = UiState.Loading
 
         runCatching {
+            val ahora = Timestamp.now()
             eventosRef()
+                .whereGreaterThanOrEqualTo("fecha", ahora)
                 .orderBy("fecha", Query.Direction.ASCENDING)
                 .get()
                 .await()
@@ -211,6 +239,26 @@ class EventsViewModel : ViewModel() {
             _ui.value = UiState.Idle
         }.onFailure {
             _ui.value = UiState.Error("No se pudieron cargar los eventos: ${it.message}")
+        }
+    }
+
+    fun cargarEventosPasados() = viewModelScope.launch {
+        _ui.value = UiState.Loading
+
+        runCatching {
+            val ahora = Timestamp.now()
+            eventosRef()
+                .whereLessThan("fecha", ahora)
+                .orderBy("fecha", Query.Direction.DESCENDING)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { d -> d.toObject(Evento::class.java)?.copy(id = d.id) }
+        }.onSuccess { list ->
+            _eventosPasados.value = list
+            _ui.value = UiState.Idle
+        }.onFailure {
+            _ui.value = UiState.Error("No se pudieron cargar los eventos pasados: ${it.message}")
         }
     }
 
@@ -299,6 +347,98 @@ class EventsViewModel : ViewModel() {
         }.onFailure {
             _ui.value = UiState.Error("No se pudo eliminar: ${it.message}")
         }
+    }
+
+    // ---------- COMENTARIOS Y CALIFICACIONES ----------
+    fun agregarComentario(
+        eventoId: String,
+        comentario: String,
+        calificacion: Int
+    ) = viewModelScope.launch {
+        val user = auth.currentUser ?: return@launch
+
+        if (comentario.isBlank()) {
+            _ui.value = UiState.Error("El comentario no puede estar vacío")
+            return@launch
+        }
+        if (calificacion !in 1..5) {
+            _ui.value = UiState.Error("La calificación debe estar entre 1 y 5")
+            return@launch
+        }
+
+        _ui.value = UiState.Loading
+
+        val data = mapOf(
+            "eventoId" to eventoId,
+            "usuarioId" to user.uid,
+            "nombreUsuario" to (user.displayName ?: user.email ?: "Anónimo"),
+            "comentario" to comentario.trim(),
+            "calificacion" to calificacion,
+            "fecha" to Timestamp.now()
+        )
+
+        runCatching {
+            // Agregar comentario
+            comentariosRef(eventoId).add(data).await()
+
+            // Actualizar calificación promedio del evento
+            actualizarCalificacionEvento(eventoId)
+        }.onSuccess {
+            _ui.value = UiState.Info("Comentario agregado correctamente")
+            cargarComentarios(eventoId)
+        }.onFailure {
+            _ui.value = UiState.Error("Error al agregar comentario: ${it.message}")
+        }
+    }
+
+    private suspend fun actualizarCalificacionEvento(eventoId: String) {
+        val comentarios = comentariosRef(eventoId).get().await()
+            .documents.mapNotNull { it.toObject(Comentario::class.java) }
+
+        if (comentarios.isNotEmpty()) {
+            val promedio = comentarios.map { it.calificacion }.average()
+            eventosRef().document(eventoId).update(
+                mapOf(
+                    "calificacionPromedio" to promedio,
+                    "totalCalificaciones" to comentarios.size
+                )
+            ).await()
+        }
+    }
+
+    fun cargarComentarios(eventoId: String) = viewModelScope.launch {
+        runCatching {
+            comentariosRef(eventoId)
+                .orderBy("fecha", Query.Direction.DESCENDING)
+                .get()
+                .await()
+                .documents
+                .mapNotNull { d -> d.toObject(Comentario::class.java)?.copy(id = d.id) }
+        }.onSuccess { list ->
+            _comentariosEvento.value = list
+        }.onFailure {
+            _ui.value = UiState.Error("Error al cargar comentarios: ${it.message}")
+        }
+    }
+
+    fun eliminarComentario(eventoId: String, comentarioId: String) = viewModelScope.launch {
+        val uid = auth.currentUser?.uid ?: return@launch
+        _ui.value = UiState.Loading
+
+        runCatching {
+            comentariosRef(eventoId).document(comentarioId).delete().await()
+            actualizarCalificacionEvento(eventoId)
+        }.onSuccess {
+            _ui.value = UiState.Info("Comentario eliminado")
+            cargarComentarios(eventoId)
+        }.onFailure {
+            _ui.value = UiState.Error("Error al eliminar: ${it.message}")
+        }
+    }
+
+    fun yaComentaste(eventoId: String): Boolean {
+        val uid = auth.currentUser?.uid ?: return false
+        return _comentariosEvento.value.any { it.usuarioId == uid }
     }
 
     fun clearUiState() {
