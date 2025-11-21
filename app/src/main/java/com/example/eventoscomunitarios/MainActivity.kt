@@ -1,5 +1,7 @@
 package com.example.eventoscomunitarios
 
+import android.content.Context // <--- NUEVO: Import necesario
+import android.content.Intent // <--- NUEVO: Import necesario
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -631,6 +633,7 @@ fun HistorialScreen(vm: EventsViewModel) {
 
 @Composable
 fun EventoCard(evento: Evento, vm: EventsViewModel) {
+    val context = LocalContext.current // <--- NUEVO: Contexto para compartir
     val estaInscrito = vm.estaInscrito(evento)
     val espaciosDisponibles = evento.maxParticipantes - evento.participantes.size
 
@@ -661,6 +664,16 @@ fun EventoCard(evento: Evento, vm: EventsViewModel) {
                         )
                     }
                 }
+
+                // <--- NUEVO: Botón de compartir
+                IconButton(onClick = { compartirEvento(context, evento, vm) }) {
+                    Icon(
+                        imageVector = Icons.Default.Share,
+                        contentDescription = "Compartir evento",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+                // <--- FIN NUEVO
             }
 
             Spacer(Modifier.height(8.dp))
@@ -851,8 +864,6 @@ fun MiEventoCard(evento: Evento, vm: EventsViewModel) {
         )
     }
 }
-
-
 
 @Composable
 fun EventoPasadoCard(evento: Evento, vm: EventsViewModel, onClick: () -> Unit) {
@@ -1713,4 +1724,29 @@ fun TimePickerDialog(
         timePickerDialog.setOnDismissListener { onDismiss() }
         timePickerDialog.show()
     }
+}
+
+// <--- NUEVO: Función helper para compartir
+fun compartirEvento(context: Context, evento: Evento, vm: EventsViewModel) {
+    val fechaStr = vm.formatearFecha(evento.fecha)
+    val mensaje = """
+        📅 ¡Mira este evento en Eventos Comunitarios!
+        
+        📍 *${evento.titulo}*
+        📂 ${evento.categoria}
+        🗓 Fecha: $fechaStr
+        📌 Ubicación: ${evento.ubicacion}
+        
+        📝 ${evento.descripcion}
+        
+        ¡Te espero ahí!
+    """.trimIndent()
+
+    val sendIntent = Intent().apply {
+        action = Intent.ACTION_SEND
+        putExtra(Intent.EXTRA_TEXT, mensaje)
+        type = "text/plain"
+    }
+    val shareIntent = Intent.createChooser(sendIntent, "Compartir evento vía...")
+    context.startActivity(shareIntent)
 }
