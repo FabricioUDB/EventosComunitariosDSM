@@ -59,6 +59,10 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation("androidx.compose.material3:material3")
+    implementation("androidx.compose.material3:material3-window-size-class")
+    // Necesitas esta dependencia para DatePicker y TimePicker si usas Material 3
+    implementation("androidx.compose.material3:material3-adaptive:1.0.0-alpha06")
 
     // --- Firebase / Google ---
     implementation(platform(libs.firebase.bom))            // BOM (versiona todo Firebase)

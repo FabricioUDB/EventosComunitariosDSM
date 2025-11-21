@@ -5,25 +5,29 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.eventoscomunitarios.ui.theme.EventosComunitariosTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.Timestamp
+import java.text.SimpleDateFormat
 import java.util.*
 
 class MainActivity : ComponentActivity() {
@@ -73,8 +77,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-// ==================== PANTALLAS DE AUTENTICACIÓN ====================
-
 @Composable
 private fun AuthScreen(
     onLoginEmail: (String, String) -> Unit,
@@ -103,7 +105,6 @@ private fun AuthScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LoginScreen(
     onLogin: (String, String) -> Unit,
@@ -251,7 +252,6 @@ private fun LoginScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun RegisterScreen(
     onRegister: (String, String) -> Unit,
@@ -407,8 +407,6 @@ private fun RegisterScreen(
         }
     }
 }
-
-// ==================== PANTALLA PRINCIPAL ====================
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -636,9 +634,7 @@ fun EventoCard(evento: Evento, vm: EventsViewModel) {
     val estaInscrito = vm.estaInscrito(evento)
     val espaciosDisponibles = evento.maxParticipantes - evento.participantes.size
 
-    Card(
-        modifier = Modifier.fillMaxWidth()
-    ) {
+    Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -775,9 +771,11 @@ fun EventoCard(evento: Evento, vm: EventsViewModel) {
 @Composable
 fun MiEventoCard(evento: Evento, vm: EventsViewModel) {
     var mostrarConfirmacion by remember { mutableStateOf(false) }
+    var mostrarEditar by remember { mutableStateOf(false) }
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -795,45 +793,44 @@ fun MiEventoCard(evento: Evento, vm: EventsViewModel) {
                     )
                 }
 
-                IconButton(onClick = { mostrarConfirmacion = true }) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Eliminar",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+                // ✔ SOLO EL ORGANIZADOR VE ESTOS BOTONES
+                if (vm.esOrganizador(evento)) {
+                    Row {
+                        IconButton(onClick = { mostrarEditar = true }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Editar")
+                        }
+                        IconButton(onClick = { mostrarConfirmacion = true }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Eliminar")
+                        }
+                    }
                 }
             }
 
             Spacer(Modifier.height(8.dp))
 
-            Text(
-                vm.formatearFecha(evento.fecha),
-                style = MaterialTheme.typography.bodyMedium
-            )
+            Text(vm.formatearFecha(evento.fecha))
 
             Spacer(Modifier.height(8.dp))
 
             Text(
                 "Inscritos: ${evento.participantes.size}/${evento.maxParticipantes}",
-                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
         }
     }
 
+    // ✔ Confirmación para eliminar
     if (mostrarConfirmacion) {
         AlertDialog(
             onDismissRequest = { mostrarConfirmacion = false },
             title = { Text("Eliminar evento") },
-            text = { Text("¿Estás seguro? Los participantes inscritos serán notificados.") },
+            text = { Text("¿Seguro que deseas eliminar este evento?") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        vm.eliminarEvento(evento.id)
-                        mostrarConfirmacion = false
-                    }
-                ) {
+                TextButton(onClick = {
+                    vm.eliminarEvento(evento.id)
+                    mostrarConfirmacion = false
+                }) {
                     Text("Eliminar", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -844,7 +841,18 @@ fun MiEventoCard(evento: Evento, vm: EventsViewModel) {
             }
         )
     }
+
+    // ✔ Diálogo de edición
+    if (mostrarEditar) {
+        EditarEventoDialog(
+            evento = evento,
+            vm = vm,
+            onDismiss = { mostrarEditar = false }
+        )
+    }
 }
+
+
 
 @Composable
 fun EventoPasadoCard(evento: Evento, vm: EventsViewModel, onClick: () -> Unit) {
@@ -981,7 +989,6 @@ fun DetalleEventoDialog(evento: Evento, vm: EventsViewModel, onDismiss: () -> Un
                     .padding(24.dp)
             ) {
                 item {
-                    // Header
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -1007,7 +1014,6 @@ fun DetalleEventoDialog(evento: Evento, vm: EventsViewModel, onDismiss: () -> Un
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Calificación promedio
                     if (evento.totalCalificaciones > 0) {
                         Card(
                             colors = CardDefaults.cardColors(
@@ -1044,7 +1050,6 @@ fun DetalleEventoDialog(evento: Evento, vm: EventsViewModel, onDismiss: () -> Un
                         Spacer(Modifier.height(16.dp))
                     }
 
-                    // Botón para agregar comentario
                     if (estaInscrito && !yaComentaste) {
                         Button(
                             onClick = { mostrarFormComentario = true },
@@ -1061,12 +1066,11 @@ fun DetalleEventoDialog(evento: Evento, vm: EventsViewModel, onDismiss: () -> Un
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.fillMaxWidth(),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                         Spacer(Modifier.height(16.dp))
                     }
 
-                    // Título de comentarios
                     Text(
                         "Comentarios (${comentarios.size})",
                         style = MaterialTheme.typography.titleMedium,
@@ -1075,7 +1079,6 @@ fun DetalleEventoDialog(evento: Evento, vm: EventsViewModel, onDismiss: () -> Un
                     Spacer(Modifier.height(8.dp))
                 }
 
-                // Lista de comentarios
                 items(comentarios, key = { it.id }) { comentario ->
                     ComentarioCard(
                         comentario = comentario,
@@ -1092,7 +1095,7 @@ fun DetalleEventoDialog(evento: Evento, vm: EventsViewModel, onDismiss: () -> Un
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.fillMaxWidth(),
-                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -1278,14 +1281,22 @@ fun CrearEventoDialog(vm: EventsViewModel, onDismiss: () -> Unit) {
 
     val cal = Calendar.getInstance().apply {
         add(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 10)
+        set(Calendar.MINUTE, 0)
     }
-    val fechaEvento = Timestamp(cal.time)
+    var fechaSeleccionada by remember { mutableStateOf(cal) }
+    var mostrarDatePicker by remember { mutableStateOf(false) }
+    var mostrarTimePicker by remember { mutableStateOf(false) }
+
+    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+    val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
     AlertDialog(onDismissRequest = onDismiss) {
         Card {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
                     .padding(24.dp)
             ) {
                 Text(
@@ -1322,6 +1333,38 @@ fun CrearEventoDialog(vm: EventsViewModel, onDismiss: () -> Unit) {
                     label = { Text("Ubicación") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = dateFormatter.format(fechaSeleccionada.time),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Fecha del evento") },
+                    leadingIcon = { Icon(Icons.Default.DateRange, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        IconButton(onClick = { mostrarDatePicker = true }) {
+                            Icon(Icons.Default.Edit, "Cambiar fecha")
+                        }
+                    }
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = timeFormatter.format(fechaSeleccionada.time),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Hora del evento") },
+                    leadingIcon = { Icon(Icons.Default.Info, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        IconButton(onClick = { mostrarTimePicker = true }) {
+                            Icon(Icons.Default.Edit, "Cambiar hora")
+                        }
+                    }
                 )
 
                 Spacer(Modifier.height(12.dp))
@@ -1380,6 +1423,7 @@ fun CrearEventoDialog(vm: EventsViewModel, onDismiss: () -> Unit) {
                     Spacer(Modifier.width(8.dp))
                     Button(
                         onClick = {
+                            val fechaEvento = Timestamp(fechaSeleccionada.time)
                             vm.crearEvento(
                                 titulo,
                                 descripcion,
@@ -1396,5 +1440,277 @@ fun CrearEventoDialog(vm: EventsViewModel, onDismiss: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (mostrarDatePicker) {
+        DatePickerDialog(
+            fechaSeleccionada = fechaSeleccionada,
+            onFechaSeleccionada = { newCal ->
+                fechaSeleccionada = newCal
+                mostrarDatePicker = false
+            },
+            onDismiss = { mostrarDatePicker = false }
+        )
+    }
+
+    if (mostrarTimePicker) {
+        TimePickerDialog(
+            fechaSeleccionada = fechaSeleccionada,
+            onHoraSeleccionada = { hour, minute ->
+                fechaSeleccionada.set(Calendar.HOUR_OF_DAY, hour)
+                fechaSeleccionada.set(Calendar.MINUTE, minute)
+                mostrarTimePicker = false
+            },
+            onDismiss = { mostrarTimePicker = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditarEventoDialog(evento: Evento, vm: EventsViewModel, onDismiss: () -> Unit) {
+    var titulo by remember { mutableStateOf(evento.titulo) }
+    var descripcion by remember { mutableStateOf(evento.descripcion) }
+    var ubicacion by remember { mutableStateOf(evento.ubicacion) }
+    var categoria by remember { mutableStateOf(evento.categoria) }
+    var maxParticipantes by remember { mutableStateOf(evento.maxParticipantes.toString()) }
+    var mostrarMenuCategorias by remember { mutableStateOf(false) }
+
+    val fechaCal = Calendar.getInstance().apply { time = evento.fecha.toDate() }
+    var fechaSeleccionada by remember { mutableStateOf(fechaCal) }
+    var mostrarDatePicker by remember { mutableStateOf(false) }
+    var mostrarTimePicker by remember { mutableStateOf(false) }
+
+    val dateFormatter = remember { SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()) }
+    val timeFormatter = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+
+    AlertDialog(onDismissRequest = onDismiss) {
+        Card {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp)
+            ) {
+                Text(
+                    "Editar Evento",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                OutlinedTextField(
+                    value = titulo,
+                    onValueChange = { titulo = it },
+                    label = { Text("Título del evento") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { descripcion = it },
+                    label = { Text("Descripción") },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 3
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = ubicacion,
+                    onValueChange = { ubicacion = it },
+                    label = { Text("Ubicación") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = dateFormatter.format(fechaSeleccionada.time),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Fecha del evento") },
+                    leadingIcon = { Icon(Icons.Default.DateRange, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        IconButton(onClick = { mostrarDatePicker = true }) {
+                            Icon(Icons.Default.Edit, "Cambiar fecha")
+                        }
+                    }
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = timeFormatter.format(fechaSeleccionada.time),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Hora del evento") },
+                    leadingIcon = { Icon(Icons.Default.Info, null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    trailingIcon = {
+                        IconButton(onClick = { mostrarTimePicker = true }) {
+                            Icon(Icons.Default.Edit, "Cambiar hora")
+                        }
+                    }
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                ExposedDropdownMenuBox(
+                    expanded = mostrarMenuCategorias,
+                    onExpandedChange = { mostrarMenuCategorias = it }
+                ) {
+                    OutlinedTextField(
+                        value = categoria,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Categoría") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(mostrarMenuCategorias) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = mostrarMenuCategorias,
+                        onDismissRequest = { mostrarMenuCategorias = false }
+                    ) {
+                        vm.categoriasEventos.forEach { cat ->
+                            DropdownMenuItem(
+                                text = { Text(cat) },
+                                onClick = {
+                                    categoria = cat
+                                    mostrarMenuCategorias = false
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = maxParticipantes,
+                    onValueChange = { maxParticipantes = it },
+                    label = { Text("Máximo de participantes") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(Modifier.height(20.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text("Cancelar")
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(
+                        onClick = {
+                            val fechaEvento = Timestamp(fechaSeleccionada.time)
+                            vm.editarEvento(
+                                evento.id,
+                                titulo,
+                                descripcion,
+                                ubicacion,
+                                fechaEvento,
+                                categoria,
+                                maxParticipantes
+                            )
+                            onDismiss()
+                        }
+                    ) {
+                        Text("Guardar")
+                    }
+                }
+            }
+        }
+    }
+
+    if (mostrarDatePicker) {
+        DatePickerDialog(
+            fechaSeleccionada = fechaSeleccionada,
+            onFechaSeleccionada = { newCal ->
+                fechaSeleccionada = newCal
+                mostrarDatePicker = false
+            },
+            onDismiss = { mostrarDatePicker = false }
+        )
+    }
+
+    if (mostrarTimePicker) {
+        TimePickerDialog(
+            fechaSeleccionada = fechaSeleccionada,
+            onHoraSeleccionada = { hour, minute ->
+                fechaSeleccionada.set(Calendar.HOUR_OF_DAY, hour)
+                fechaSeleccionada.set(Calendar.MINUTE, minute)
+                mostrarTimePicker = false
+            },
+            onDismiss = { mostrarTimePicker = false }
+        )
+    }
+}
+
+@Composable
+fun DatePickerDialog(
+    fechaSeleccionada: Calendar,
+    onFechaSeleccionada: (Calendar) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        val datePickerDialog = android.app.DatePickerDialog(
+            context,
+            { _, year, month, day ->
+                val newCal = Calendar.getInstance().apply {
+                    timeInMillis = fechaSeleccionada.timeInMillis
+                    set(Calendar.YEAR, year)
+                    set(Calendar.MONTH, month)
+                    set(Calendar.DAY_OF_MONTH, day)
+                }
+                onFechaSeleccionada(newCal)
+            },
+            fechaSeleccionada.get(Calendar.YEAR),
+            fechaSeleccionada.get(Calendar.MONTH),
+            fechaSeleccionada.get(Calendar.DAY_OF_MONTH)
+        )
+
+        datePickerDialog.datePicker.minDate = System.currentTimeMillis()
+        datePickerDialog.setOnDismissListener { onDismiss() }
+        datePickerDialog.show()
+    }
+}
+
+@Composable
+fun TimePickerDialog(
+    fechaSeleccionada: Calendar,
+    onHoraSeleccionada: (Int, Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        val timePickerDialog = android.app.TimePickerDialog(
+            context,
+            { _, hour, minute ->
+                onHoraSeleccionada(hour, minute)
+            },
+            fechaSeleccionada.get(Calendar.HOUR_OF_DAY),
+            fechaSeleccionada.get(Calendar.MINUTE),
+            true
+        )
+
+        timePickerDialog.setOnDismissListener { onDismiss() }
+        timePickerDialog.show()
     }
 }

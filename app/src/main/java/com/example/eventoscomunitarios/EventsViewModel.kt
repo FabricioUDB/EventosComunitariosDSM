@@ -131,6 +131,8 @@ class EventsViewModel : ViewModel() {
         }.onSuccess {
             _user.value = auth.currentUser
             _ui.value = UiState.Info("Inicio de sesión exitoso")
+            cargarEventos()
+            cargarMisEventos()
         }.onFailure {
             _ui.value = UiState.Error(it.message ?: "Credenciales inválidas")
         }
@@ -143,6 +145,8 @@ class EventsViewModel : ViewModel() {
             .onSuccess {
                 _user.value = auth.currentUser
                 _ui.value = UiState.Info("Inicio de sesión con Google exitoso")
+                cargarEventos()
+                cargarMisEventos() // <--- AGREGAR ESTO
             }
             .onFailure {
                 _ui.value = UiState.Error("Google Sign-In falló: ${it.message}")
@@ -263,22 +267,30 @@ class EventsViewModel : ViewModel() {
     }
 
     fun cargarMisEventos() = viewModelScope.launch {
+        // 1. Obtener el ID del usuario actual. Si es nulo, salir.
         val uid = auth.currentUser?.uid ?: return@launch
+
         _ui.value = UiState.Loading
 
         runCatching {
             eventosRef()
+                // 2. FILTRO CLAVE: Solo trae eventos donde organizadorId coincide con el UID
                 .whereEqualTo("organizadorId", uid)
-                .orderBy("fecha", Query.Direction.ASCENDING)
                 .get()
                 .await()
-                .documents
-                .mapNotNull { d -> d.toObject(Evento::class.java)?.copy(id = d.id) }
+                .toObjects(Evento::class.java)
+                // Asigna los IDs de los documentos a los objetos Evento
+                .mapIndexed { index, evento ->
+                    val document = eventosRef()
+                        .whereEqualTo("organizadorId", uid) // Repetir la consulta para obtener documentos
+                        .get().await().documents[index]
+                    evento.copy(id = document.id)
+                }
         }.onSuccess { list ->
-            _misEventos.value = list
+            _misEventos.value = list // 3. Actualiza el StateFlow correcto
             _ui.value = UiState.Idle
         }.onFailure {
-            _ui.value = UiState.Error("No se pudieron cargar tus eventos: ${it.message}")
+            _ui.value = UiState.Error("Error al cargar tus eventos: ${it.message}")
         }
     }
 
@@ -457,5 +469,51 @@ class EventsViewModel : ViewModel() {
     fun esOrganizador(evento: Evento): Boolean {
         val uid = auth.currentUser?.uid ?: return false
         return evento.organizadorId == uid
+    }
+    fun editarEvento(
+        eventoId: String,
+        titulo: String,
+        descripcion: String,
+        ubicacion: String,
+        fecha: Timestamp,
+        categoria: String,
+        maxParticipantes: String
+    ) = viewModelScope.launch {
+        val uid = auth.currentUser?.uid ?: return@launch
+        val max = maxParticipantes.toIntOrNull()
+
+        if (titulo.isBlank()) {
+            _ui.value = UiState.Error("El título no puede estar vacío")
+            return@launch
+        }
+        if (categoria.isBlank()) {
+            _ui.value = UiState.Error("Selecciona una categoría")
+            return@launch
+        }
+        if (max == null || max <= 0) {
+            _ui.value = UiState.Error("Ingresa un número válido de participantes")
+            return@launch
+        }
+
+        _ui.value = UiState.Loading
+
+        val data = mapOf(
+            "titulo" to titulo.trim(),
+            "descripcion" to descripcion.trim(),
+            "ubicacion" to ubicacion.trim(),
+            "fecha" to fecha,
+            "categoria" to categoria.trim(),
+            "maxParticipantes" to max
+        )
+
+        runCatching {
+            eventosRef().document(eventoId).update(data).await()
+        }.onSuccess {
+            _ui.value = UiState.Info("Evento actualizado correctamente")
+            cargarMisEventos()
+            cargarEventos()
+        }.onFailure {
+            _ui.value = UiState.Error("Error al actualizar: ${it.message}")
+        }
     }
 }
