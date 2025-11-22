@@ -1,9 +1,16 @@
 package com.example.eventoscomunitarios
 
-import android.content.Context // <--- NUEVO: Import necesario
-import android.content.Intent // <--- NUEVO: Import necesario
+import android.Manifest // <--- NUEVO
+import android.app.NotificationChannel // <--- NUEVO
+import android.app.NotificationManager // <--- NUEVO
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager // <--- NUEVO
+import android.os.Build // <--- NUEVO
 import android.os.Bundle
+import android.provider.CalendarContract // <--- NUEVO
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult // <--- NUEVO
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -24,6 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat // <--- NUEVO
+import androidx.core.app.NotificationCompat // <--- NUEVO
+import androidx.core.app.NotificationManagerCompat // <--- NUEVO
 import com.example.eventoscomunitarios.ui.theme.EventosComunitariosTheme
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
@@ -59,10 +69,18 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // <--- NUEVO: Crear canal de notificaciones al iniciar
+        crearCanalNotificaciones(this)
+
         setContent {
             EventosComunitariosTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val user by vm.user.collectAsState()
+
+                    // <--- NUEVO: Pedir permiso de notificaciones en Android 13+
+                    PermisoNotificaciones()
+
                     if (user == null) {
                         AuthScreen(
                             onLoginEmail = { e, p -> vm.loginWithEmail(e, p) },
@@ -79,6 +97,24 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// <--- NUEVO: Composable para pedir permisos
+@Composable
+fun PermisoNotificaciones() {
+    val context = LocalContext.current
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { /* No necesitamos hacer nada si acepta o deniega */ }
+    )
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+}
+
 @Composable
 private fun AuthScreen(
     onLoginEmail: (String, String) -> Unit,
@@ -86,6 +122,7 @@ private fun AuthScreen(
     onLoginGoogle: () -> Unit,
     vm: EventsViewModel
 ) {
+    // ... (El contenido de AuthScreen es idéntico al anterior, sin cambios)
     var showRegisterScreen by remember { mutableStateOf(false) }
     val user by vm.user.collectAsState()
 
@@ -114,6 +151,7 @@ private fun LoginScreen(
     onLoginGoogle: () -> Unit,
     vm: EventsViewModel
 ) {
+    // ... (LoginScreen idéntico al código anterior)
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     val ui by vm.ui.collectAsState()
@@ -260,6 +298,7 @@ private fun RegisterScreen(
     onBackToLogin: () -> Unit,
     vm: EventsViewModel
 ) {
+    // ... (RegisterScreen idéntico al código anterior)
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
@@ -413,8 +452,18 @@ private fun RegisterScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeScreen(vm: EventsViewModel, onLogout: () -> Unit) {
+    val context = LocalContext.current // <--- Necesario para la notificación
+
     var tabIndex by remember { mutableStateOf(0) }
     val tabs = listOf("Próximos", "Mis Eventos", "Historial")
+
+    // <--- NUEVO: Escuchamos los cambios que reporta el ViewModel
+    LaunchedEffect(Unit) {
+        vm.notificacion.collect { mensaje ->
+            // Lanza la notificación en la barra de estado
+            mostrarNotificacion(context, "Evento Actualizado", mensaje)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -450,6 +499,7 @@ private fun HomeScreen(vm: EventsViewModel, onLogout: () -> Unit) {
 
 @Composable
 fun EventosListScreen(vm: EventsViewModel) {
+    // ... (EventosListScreen idéntico)
     val eventos by vm.eventos.collectAsState()
     val ui by vm.ui.collectAsState()
     var mostrarCrearEvento by remember { mutableStateOf(false) }
@@ -518,6 +568,7 @@ fun EventosListScreen(vm: EventsViewModel) {
 
 @Composable
 fun MisEventosScreen(vm: EventsViewModel) {
+    // ... (MisEventosScreen idéntico)
     val misEventos by vm.misEventos.collectAsState()
     val ui by vm.ui.collectAsState()
 
@@ -569,6 +620,7 @@ fun MisEventosScreen(vm: EventsViewModel) {
 
 @Composable
 fun HistorialScreen(vm: EventsViewModel) {
+    // ... (HistorialScreen idéntico)
     val eventosPasados by vm.eventosPasados.collectAsState()
     val ui by vm.ui.collectAsState()
     var eventoSeleccionado by remember { mutableStateOf<Evento?>(null) }
@@ -633,7 +685,7 @@ fun HistorialScreen(vm: EventsViewModel) {
 
 @Composable
 fun EventoCard(evento: Evento, vm: EventsViewModel) {
-    val context = LocalContext.current // <--- NUEVO: Contexto para compartir
+    val context = LocalContext.current
     val estaInscrito = vm.estaInscrito(evento)
     val espaciosDisponibles = evento.maxParticipantes - evento.participantes.size
 
@@ -665,17 +717,27 @@ fun EventoCard(evento: Evento, vm: EventsViewModel) {
                     }
                 }
 
-                // <--- NUEVO: Botón de compartir
-                IconButton(onClick = { compartirEvento(context, evento, vm) }) {
-                    Icon(
-                        imageVector = Icons.Default.Share,
-                        contentDescription = "Compartir evento",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
+                Row {
+                    // <--- NUEVO: Botón de Calendario
+                    IconButton(onClick = { agregarCalendario(context, evento) }) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Recordatorio",
+                            tint = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+
+                    IconButton(onClick = { compartirEvento(context, evento, vm) }) {
+                        Icon(
+                            imageVector = Icons.Default.Share,
+                            contentDescription = "Compartir evento",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
                 }
-                // <--- FIN NUEVO
             }
 
+            // ... (Resto del EventoCard idéntico, solo cambia el bloque final de botones)
             Spacer(Modifier.height(8.dp))
 
             if (evento.descripcion.isNotBlank()) {
@@ -761,7 +823,11 @@ fun EventoCard(evento: Evento, vm: EventsViewModel) {
                 }
             } else if (espaciosDisponibles > 0) {
                 Button(
-                    onClick = { vm.inscribirseEvento(evento.id) },
+                    onClick = {
+                        vm.inscribirseEvento(evento.id)
+                        // <--- NUEVO: Enviar notificación local al inscribirse
+                        mostrarNotificacion(context, "Inscripción confirmada", "Te has apuntado a ${evento.titulo}")
+                    },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.CheckCircle, null)
@@ -781,6 +847,7 @@ fun EventoCard(evento: Evento, vm: EventsViewModel) {
     }
 }
 
+// ... (El resto de funciones Composable: MiEventoCard, EventoPasadoCard, etc. siguen igual)
 @Composable
 fun MiEventoCard(evento: Evento, vm: EventsViewModel) {
     var mostrarConfirmacion by remember { mutableStateOf(false) }
@@ -1726,7 +1793,6 @@ fun TimePickerDialog(
     }
 }
 
-// <--- NUEVO: Función helper para compartir
 fun compartirEvento(context: Context, evento: Evento, vm: EventsViewModel) {
     val fechaStr = vm.formatearFecha(evento.fecha)
     val mensaje = """
@@ -1749,4 +1815,56 @@ fun compartirEvento(context: Context, evento: Evento, vm: EventsViewModel) {
     }
     val shareIntent = Intent.createChooser(sendIntent, "Compartir evento vía...")
     context.startActivity(shareIntent)
+}
+
+// <--- NUEVO: Función para abrir el calendario y crear recordatorio
+fun agregarCalendario(context: Context, evento: Evento) {
+    val intent = Intent(Intent.ACTION_INSERT).apply {
+        data = CalendarContract.Events.CONTENT_URI
+        putExtra(CalendarContract.Events.TITLE, evento.titulo)
+        putExtra(CalendarContract.Events.EVENT_LOCATION, evento.ubicacion)
+        putExtra(CalendarContract.Events.DESCRIPTION, evento.descripcion)
+        putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, evento.fecha.toDate().time)
+        putExtra(CalendarContract.EXTRA_EVENT_END_TIME, evento.fecha.toDate().time + 3600000) // +1 hora por defecto
+    }
+    try {
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        // Si no hay app de calendario instalada
+    }
+}
+
+// <--- NUEVO: Configuración del canal de notificaciones
+fun crearCanalNotificaciones(context: Context) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        val name = "Notificaciones de Eventos"
+        val descriptionText = "Canal para recordatorios de eventos"
+        val importance = NotificationManager.IMPORTANCE_DEFAULT
+        val channel = NotificationChannel("EVENTOS_CHANNEL", name, importance).apply {
+            description = descriptionText
+        }
+        val notificationManager: NotificationManager =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.createNotificationChannel(channel)
+    }
+}
+
+// <--- NUEVO: Mostrar notificación local
+fun mostrarNotificacion(context: Context, titulo: String, mensaje: String) {
+    if (ActivityCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    ) {
+        val builder = NotificationCompat.Builder(context, "EVENTOS_CHANNEL")
+            .setSmallIcon(android.R.drawable.ic_dialog_info) // Puedes usar tu propio ícono
+            .setContentTitle(titulo)
+            .setContentText(mensaje)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+
+        with(NotificationManagerCompat.from(context)) {
+            notify(System.currentTimeMillis().toInt(), builder.build())
+        }
+    }
 }

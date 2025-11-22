@@ -5,10 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.firestore.DocumentChange // <--- NUEVO: Importante para detectar cambios
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.flow.MutableSharedFlow // <--- NUEVO
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow // <--- NUEVO
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -53,11 +57,17 @@ sealed class UiState {
 
 class EventsViewModel : ViewModel() {
 
-    // Firebase
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
-    // Estado expuesto a la UI
+    private var listenerEventos: ListenerRegistration? = null
+    private var listenerMisEventos: ListenerRegistration? = null
+    private var listenerHistorial: ListenerRegistration? = null
+
+    // <--- NUEVO: Canal para enviar notificaciones a la vista
+    private val _notificacion = MutableSharedFlow<String>()
+    val notificacion = _notificacion.asSharedFlow()
+
     private val _user = MutableStateFlow(auth.currentUser)
     val user: StateFlow<com.google.firebase.auth.FirebaseUser?> = _user.asStateFlow()
 
@@ -76,18 +86,9 @@ class EventsViewModel : ViewModel() {
     private val _comentariosEvento = MutableStateFlow<List<Comentario>>(emptyList())
     val comentariosEvento: StateFlow<List<Comentario>> = _comentariosEvento.asStateFlow()
 
-    // Categorías de eventos
     val categoriasEventos = listOf(
-        "Deportes",
-        "Cultura",
-        "Educación",
-        "Música",
-        "Arte",
-        "Gastronomía",
-        "Tecnología",
-        "Solidaridad",
-        "Medio Ambiente",
-        "Otros"
+        "Deportes", "Cultura", "Educación", "Música", "Arte",
+        "Gastronomía", "Tecnología", "Solidaridad", "Medio Ambiente", "Otros"
     )
 
     private val dateFormatter = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
@@ -96,11 +97,8 @@ class EventsViewModel : ViewModel() {
         try {
             db.firestoreSettings = com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
                 .setPersistenceEnabled(true)
-                .setCacheSizeBytes(com.google.firebase.firestore.FirebaseFirestoreSettings.CACHE_SIZE_UNLIMITED)
                 .build()
-        } catch (e: Exception) {
-            // Ya configurado
-        }
+        } catch (e: Exception) { }
     }
 
     // ---------- AUTENTICACIÓN ----------
@@ -115,6 +113,7 @@ class EventsViewModel : ViewModel() {
         }.onSuccess {
             _user.value = auth.currentUser
             _ui.value = UiState.Info("Cuenta creada correctamente")
+            iniciarEscuchaDeDatos()
         }.onFailure {
             _ui.value = UiState.Error(it.message ?: "Error al registrarse")
         }
@@ -131,8 +130,7 @@ class EventsViewModel : ViewModel() {
         }.onSuccess {
             _user.value = auth.currentUser
             _ui.value = UiState.Info("Inicio de sesión exitoso")
-            cargarEventos()
-            cargarMisEventos()
+            iniciarEscuchaDeDatos()
         }.onFailure {
             _ui.value = UiState.Error(it.message ?: "Credenciales inválidas")
         }
@@ -145,8 +143,7 @@ class EventsViewModel : ViewModel() {
             .onSuccess {
                 _user.value = auth.currentUser
                 _ui.value = UiState.Info("Inicio de sesión con Google exitoso")
-                cargarEventos()
-                cargarMisEventos() // <--- AGREGAR ESTO
+                iniciarEscuchaDeDatos()
             }
             .onFailure {
                 _ui.value = UiState.Error("Google Sign-In falló: ${it.message}")
@@ -154,6 +151,7 @@ class EventsViewModel : ViewModel() {
     }
 
     fun signOut() {
+        detenerEscuchaDeDatos()
         auth.signOut()
         _user.value = null
         _eventos.value = emptyList()
@@ -161,6 +159,21 @@ class EventsViewModel : ViewModel() {
         _eventosPasados.value = emptyList()
         _comentariosEvento.value = emptyList()
         _ui.value = UiState.Idle
+    }
+
+    private fun iniciarEscuchaDeDatos() {
+        cargarEventos()
+        cargarMisEventos()
+        cargarEventosPasados()
+    }
+
+    private fun detenerEscuchaDeDatos() {
+        listenerEventos?.remove()
+        listenerMisEventos?.remove()
+        listenerHistorial?.remove()
+        listenerEventos = null
+        listenerMisEventos = null
+        listenerHistorial = null
     }
 
     fun clearErrorState() {
@@ -176,12 +189,8 @@ class EventsViewModel : ViewModel() {
 
     // ---------- OPERACIONES CRUD ----------
     fun crearEvento(
-        titulo: String,
-        descripcion: String,
-        ubicacion: String,
-        fecha: Timestamp,
-        categoria: String,
-        maxParticipantes: String
+        titulo: String, descripcion: String, ubicacion: String,
+        fecha: Timestamp, categoria: String, maxParticipantes: String
     ) = viewModelScope.launch {
         val user = auth.currentUser ?: return@launch
         val max = maxParticipantes.toIntOrNull()
@@ -200,7 +209,6 @@ class EventsViewModel : ViewModel() {
         }
 
         _ui.value = UiState.Loading
-
         val data = mapOf(
             "titulo" to titulo.trim(),
             "descripcion" to descripcion.trim(),
@@ -217,169 +225,129 @@ class EventsViewModel : ViewModel() {
         )
 
         runCatching { eventosRef().add(data).await() }
-            .onSuccess {
-                _ui.value = UiState.Info("Evento creado correctamente")
-                cargarEventos()
-            }
-            .onFailure {
-                _ui.value = UiState.Error("Error al crear evento: ${it.message}")
-            }
+            .onSuccess { _ui.value = UiState.Info("Evento creado correctamente") }
+            .onFailure { _ui.value = UiState.Error("Error al crear evento: ${it.message}") }
     }
 
-    fun cargarEventos() = viewModelScope.launch {
-        _ui.value = UiState.Loading
+    fun cargarEventos() {
+        if (listenerEventos != null) return
 
-        runCatching {
-            val ahora = Timestamp.now()
-            eventosRef()
-                .whereGreaterThanOrEqualTo("fecha", ahora)
-                .orderBy("fecha", Query.Direction.ASCENDING)
-                .get()
-                .await()
-                .documents
-                .mapNotNull { d -> d.toObject(Evento::class.java)?.copy(id = d.id) }
-        }.onSuccess { list ->
-            _eventos.value = list
-            _ui.value = UiState.Idle
-        }.onFailure {
-            _ui.value = UiState.Error("No se pudieron cargar los eventos: ${it.message}")
-        }
-    }
-
-    fun cargarEventosPasados() = viewModelScope.launch {
-        _ui.value = UiState.Loading
-
-        runCatching {
-            val ahora = Timestamp.now()
-            eventosRef()
-                .whereLessThan("fecha", ahora)
-                .orderBy("fecha", Query.Direction.DESCENDING)
-                .get()
-                .await()
-                .documents
-                .mapNotNull { d -> d.toObject(Evento::class.java)?.copy(id = d.id) }
-        }.onSuccess { list ->
-            _eventosPasados.value = list
-            _ui.value = UiState.Idle
-        }.onFailure {
-            _ui.value = UiState.Error("No se pudieron cargar los eventos pasados: ${it.message}")
-        }
-    }
-
-    fun cargarMisEventos() = viewModelScope.launch {
-        // 1. Obtener el ID del usuario actual. Si es nulo, salir.
-        val uid = auth.currentUser?.uid ?: return@launch
-
-        _ui.value = UiState.Loading
-
-        runCatching {
-            eventosRef()
-                // 2. FILTRO CLAVE: Solo trae eventos donde organizadorId coincide con el UID
-                .whereEqualTo("organizadorId", uid)
-                .get()
-                .await()
-                .toObjects(Evento::class.java)
-                // Asigna los IDs de los documentos a los objetos Evento
-                .mapIndexed { index, evento ->
-                    val document = eventosRef()
-                        .whereEqualTo("organizadorId", uid) // Repetir la consulta para obtener documentos
-                        .get().await().documents[index]
-                    evento.copy(id = document.id)
+        val ahora = Timestamp.now()
+        listenerEventos = eventosRef()
+            .whereGreaterThanOrEqualTo("fecha", ahora)
+            .orderBy("fecha", Query.Direction.ASCENDING)
+            .addSnapshotListener { snapshots, e ->
+                if (e != null) {
+                    _ui.value = UiState.Error("Error al cargar eventos: ${e.message}")
+                    return@addSnapshotListener
                 }
-        }.onSuccess { list ->
-            _misEventos.value = list // 3. Actualiza el StateFlow correcto
-            _ui.value = UiState.Idle
-        }.onFailure {
-            _ui.value = UiState.Error("Error al cargar tus eventos: ${it.message}")
-        }
+                if (snapshots != null) {
+                    // <--- NUEVO: DETECTAR MODIFICACIONES PARA NOTIFICAR
+                    for (dc in snapshots.documentChanges) {
+                        if (dc.type == DocumentChange.Type.MODIFIED) {
+                            val evento = dc.document.toObject(Evento::class.java)
+                            val uid = auth.currentUser?.uid
+                            // Si el usuario está logueado y participa en el evento...
+                            if (uid != null && evento.participantes.contains(uid)) {
+                                viewModelScope.launch {
+                                    // ... Enviamos la notificación
+                                    _notificacion.emit("Hubo cambios en el evento: ${evento.titulo}")
+                                }
+                            }
+                        }
+                    }
+
+                    val list = snapshots.documents.mapNotNull { d ->
+                        d.toObject(Evento::class.java)?.copy(id = d.id)
+                    }
+                    _eventos.value = list
+                }
+            }
+    }
+
+    fun cargarEventosPasados() {
+        if (listenerHistorial != null) return
+        val ahora = Timestamp.now()
+        listenerHistorial = eventosRef()
+            .whereLessThan("fecha", ahora)
+            .orderBy("fecha", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshots, e ->
+                if (snapshots != null) {
+                    val list = snapshots.documents.mapNotNull { d ->
+                        d.toObject(Evento::class.java)?.copy(id = d.id)
+                    }
+                    _eventosPasados.value = list
+                }
+            }
+    }
+
+    fun cargarMisEventos() {
+        val uid = auth.currentUser?.uid ?: return
+        if (listenerMisEventos != null) return
+        listenerMisEventos = eventosRef()
+            .whereEqualTo("organizadorId", uid)
+            .addSnapshotListener { snapshots, e ->
+                if (e != null) {
+                    _ui.value = UiState.Error("Error al cargar mis eventos: ${e.message}")
+                    return@addSnapshotListener
+                }
+                if (snapshots != null) {
+                    val list = snapshots.documents.mapNotNull { d ->
+                        d.toObject(Evento::class.java)?.copy(id = d.id)
+                    }
+                    _misEventos.value = list
+                }
+            }
     }
 
     fun inscribirseEvento(eventoId: String) = viewModelScope.launch {
         val user = auth.currentUser ?: return@launch
         _ui.value = UiState.Loading
-
         val eventoRef = eventosRef().document(eventoId)
 
         runCatching {
             db.runTransaction { transaction ->
                 val snapshot = transaction.get(eventoRef)
                 val evento = snapshot.toObject(Evento::class.java) ?: throw Exception("Evento no encontrado")
-
-                if (evento.participantes.contains(user.uid)) {
-                    throw Exception("Ya estás inscrito en este evento")
-                }
-
-                if (evento.participantes.size >= evento.maxParticipantes) {
-                    throw Exception("El evento está lleno")
-                }
-
+                if (evento.participantes.contains(user.uid)) throw Exception("Ya estás inscrito en este evento")
+                if (evento.participantes.size >= evento.maxParticipantes) throw Exception("El evento está lleno")
                 val nuevosParticipantes = evento.participantes + user.uid
                 transaction.update(eventoRef, "participantes", nuevosParticipantes)
             }.await()
-        }.onSuccess {
-            _ui.value = UiState.Info("Te has inscrito correctamente")
-            cargarEventos()
-        }.onFailure {
-            _ui.value = UiState.Error(it.message ?: "Error al inscribirse")
-        }
+        }.onSuccess { _ui.value = UiState.Info("Te has inscrito correctamente") }
+            .onFailure { _ui.value = UiState.Error(it.message ?: "Error al inscribirse") }
     }
 
     fun desinscribirseEvento(eventoId: String) = viewModelScope.launch {
         val user = auth.currentUser ?: return@launch
         _ui.value = UiState.Loading
-
         val eventoRef = eventosRef().document(eventoId)
 
         runCatching {
             db.runTransaction { transaction ->
                 val snapshot = transaction.get(eventoRef)
                 val evento = snapshot.toObject(Evento::class.java) ?: throw Exception("Evento no encontrado")
-
                 val nuevosParticipantes = evento.participantes.filter { it != user.uid }
                 transaction.update(eventoRef, "participantes", nuevosParticipantes)
             }.await()
-        }.onSuccess {
-            _ui.value = UiState.Info("Te has desinscrito del evento")
-            cargarEventos()
-        }.onFailure {
-            _ui.value = UiState.Error(it.message ?: "Error al desinscribirse")
-        }
+        }.onSuccess { _ui.value = UiState.Info("Te has desinscrito del evento") }
+            .onFailure { _ui.value = UiState.Error(it.message ?: "Error al desinscribirse") }
     }
 
     fun eliminarEvento(eventoId: String) = viewModelScope.launch {
-        val uid = auth.currentUser?.uid ?: return@launch
         _ui.value = UiState.Loading
-
-        runCatching {
-            eventosRef().document(eventoId).delete().await()
-        }.onSuccess {
-            _ui.value = UiState.Info("Evento eliminado")
-            cargarMisEventos()
-            cargarEventos()
-        }.onFailure {
-            _ui.value = UiState.Error("No se pudo eliminar: ${it.message}")
-        }
+        runCatching { eventosRef().document(eventoId).delete().await() }
+            .onSuccess { _ui.value = UiState.Info("Evento eliminado") }
+            .onFailure { _ui.value = UiState.Error("No se pudo eliminar: ${it.message}") }
     }
 
-    // ---------- COMENTARIOS Y CALIFICACIONES ----------
-    fun agregarComentario(
-        eventoId: String,
-        comentario: String,
-        calificacion: Int
-    ) = viewModelScope.launch {
+    fun agregarComentario(eventoId: String, comentario: String, calificacion: Int) = viewModelScope.launch {
         val user = auth.currentUser ?: return@launch
-
         if (comentario.isBlank()) {
             _ui.value = UiState.Error("El comentario no puede estar vacío")
             return@launch
         }
-        if (calificacion !in 1..5) {
-            _ui.value = UiState.Error("La calificación debe estar entre 1 y 5")
-            return@launch
-        }
-
         _ui.value = UiState.Loading
-
         val data = mapOf(
             "eventoId" to eventoId,
             "usuarioId" to user.uid,
@@ -388,64 +356,43 @@ class EventsViewModel : ViewModel() {
             "calificacion" to calificacion,
             "fecha" to Timestamp.now()
         )
-
         runCatching {
-            // Agregar comentario
             comentariosRef(eventoId).add(data).await()
-
-            // Actualizar calificación promedio del evento
             actualizarCalificacionEvento(eventoId)
         }.onSuccess {
             _ui.value = UiState.Info("Comentario agregado correctamente")
             cargarComentarios(eventoId)
-        }.onFailure {
-            _ui.value = UiState.Error("Error al agregar comentario: ${it.message}")
-        }
+        }.onFailure { _ui.value = UiState.Error("Error al agregar comentario: ${it.message}") }
     }
 
     private suspend fun actualizarCalificacionEvento(eventoId: String) {
         val comentarios = comentariosRef(eventoId).get().await()
             .documents.mapNotNull { it.toObject(Comentario::class.java) }
-
         if (comentarios.isNotEmpty()) {
             val promedio = comentarios.map { it.calificacion }.average()
             eventosRef().document(eventoId).update(
-                mapOf(
-                    "calificacionPromedio" to promedio,
-                    "totalCalificaciones" to comentarios.size
-                )
+                mapOf("calificacionPromedio" to promedio, "totalCalificaciones" to comentarios.size)
             ).await()
         }
     }
 
     fun cargarComentarios(eventoId: String) = viewModelScope.launch {
         runCatching {
-            comentariosRef(eventoId)
-                .orderBy("fecha", Query.Direction.DESCENDING)
-                .get()
-                .await()
-                .documents
+            comentariosRef(eventoId).orderBy("fecha", Query.Direction.DESCENDING)
+                .get().await().documents
                 .mapNotNull { d -> d.toObject(Comentario::class.java)?.copy(id = d.id) }
-        }.onSuccess { list ->
-            _comentariosEvento.value = list
-        }.onFailure {
-            _ui.value = UiState.Error("Error al cargar comentarios: ${it.message}")
-        }
+        }.onSuccess { list -> _comentariosEvento.value = list }
     }
 
     fun eliminarComentario(eventoId: String, comentarioId: String) = viewModelScope.launch {
-        val uid = auth.currentUser?.uid ?: return@launch
         _ui.value = UiState.Loading
-
         runCatching {
             comentariosRef(eventoId).document(comentarioId).delete().await()
             actualizarCalificacionEvento(eventoId)
         }.onSuccess {
             _ui.value = UiState.Info("Comentario eliminado")
             cargarComentarios(eventoId)
-        }.onFailure {
-            _ui.value = UiState.Error("Error al eliminar: ${it.message}")
-        }
+        }.onFailure { _ui.value = UiState.Error("Error al eliminar: ${it.message}") }
     }
 
     fun yaComentaste(eventoId: String): Boolean {
@@ -453,67 +400,32 @@ class EventsViewModel : ViewModel() {
         return _comentariosEvento.value.any { it.usuarioId == uid }
     }
 
-    fun clearUiState() {
-        _ui.value = UiState.Idle
-    }
+    fun clearUiState() { _ui.value = UiState.Idle }
+    fun formatearFecha(timestamp: Timestamp): String = dateFormatter.format(timestamp.toDate())
+    fun estaInscrito(evento: Evento): Boolean = evento.participantes.contains(auth.currentUser?.uid)
+    fun esOrganizador(evento: Evento): Boolean = evento.organizadorId == auth.currentUser?.uid
 
-    fun formatearFecha(timestamp: Timestamp): String {
-        return dateFormatter.format(timestamp.toDate())
-    }
-
-    fun estaInscrito(evento: Evento): Boolean {
-        val uid = auth.currentUser?.uid ?: return false
-        return evento.participantes.contains(uid)
-    }
-
-    fun esOrganizador(evento: Evento): Boolean {
-        val uid = auth.currentUser?.uid ?: return false
-        return evento.organizadorId == uid
-    }
     fun editarEvento(
-        eventoId: String,
-        titulo: String,
-        descripcion: String,
-        ubicacion: String,
-        fecha: Timestamp,
-        categoria: String,
-        maxParticipantes: String
+        eventoId: String, titulo: String, descripcion: String,
+        ubicacion: String, fecha: Timestamp, categoria: String, maxParticipantes: String
     ) = viewModelScope.launch {
-        val uid = auth.currentUser?.uid ?: return@launch
         val max = maxParticipantes.toIntOrNull()
-
-        if (titulo.isBlank()) {
-            _ui.value = UiState.Error("El título no puede estar vacío")
-            return@launch
-        }
-        if (categoria.isBlank()) {
-            _ui.value = UiState.Error("Selecciona una categoría")
-            return@launch
-        }
-        if (max == null || max <= 0) {
-            _ui.value = UiState.Error("Ingresa un número válido de participantes")
-            return@launch
-        }
+        if (titulo.isBlank()) { _ui.value = UiState.Error("El título no puede estar vacío"); return@launch }
+        if (max == null || max <= 0) { _ui.value = UiState.Error("Ingresa un número válido de participantes"); return@launch }
 
         _ui.value = UiState.Loading
-
         val data = mapOf(
-            "titulo" to titulo.trim(),
-            "descripcion" to descripcion.trim(),
-            "ubicacion" to ubicacion.trim(),
-            "fecha" to fecha,
-            "categoria" to categoria.trim(),
-            "maxParticipantes" to max
+            "titulo" to titulo.trim(), "descripcion" to descripcion.trim(),
+            "ubicacion" to ubicacion.trim(), "fecha" to fecha,
+            "categoria" to categoria.trim(), "maxParticipantes" to max
         )
+        runCatching { eventosRef().document(eventoId).update(data).await() }
+            .onSuccess { _ui.value = UiState.Info("Evento actualizado correctamente") }
+            .onFailure { _ui.value = UiState.Error("Error al actualizar: ${it.message}") }
+    }
 
-        runCatching {
-            eventosRef().document(eventoId).update(data).await()
-        }.onSuccess {
-            _ui.value = UiState.Info("Evento actualizado correctamente")
-            cargarMisEventos()
-            cargarEventos()
-        }.onFailure {
-            _ui.value = UiState.Error("Error al actualizar: ${it.message}")
-        }
+    override fun onCleared() {
+        super.onCleared()
+        detenerEscuchaDeDatos()
     }
 }
