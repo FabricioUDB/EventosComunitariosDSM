@@ -34,6 +34,9 @@
 
 Aplicación Android nativa que facilita la organización y participación en eventos comunitarios locales. Los usuarios pueden crear, descubrir y participar en eventos de diversas categorías con un sistema completo de calificaciones y licencias Creative Commons.
 
+🔗 **[Ver Tablero del Proyecto](https://trello.com/w/segundoproyectoenandroidconkotlin/home)**
+🔗 **[Ver Tablero del Proyecto](https://www.figma.com/design/sFlJkc3JKbkiXVekPzqlnX/Proyecto-Organizador-de-Eventos--Copy-?node-id=0-1&t=wdyyrWlKf5LBruZt-1)**
+
 ---
 
 ## ✨ Características Principales
