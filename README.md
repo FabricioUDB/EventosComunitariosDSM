@@ -1,278 +1,387 @@
-# 💰 Control de Gastos Personales
+# 🎉 Eventos Comunitarios
 
-Aplicación Android nativa para administrar tus finanzas personales de forma fácil y segura.
+<div align="center">
 
 ![Android](https://img.shields.io/badge/Android-3DDC84?style=for-the-badge&logo=android&logoColor=white)
 ![Kotlin](https://img.shields.io/badge/Kotlin-0095D5?style=for-the-badge&logo=kotlin&logoColor=white)
 ![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)
 
-## 📱 Características
+**Aplicación Android para conectar comunidades a través de eventos**
 
-### ✅ Funcionalidades Principales
+</div>
 
-- **Autenticación Segura**
-  - 📧 Registro e inicio de sesión con email y contraseña
-  - 🔐 Integración con Google Sign-In
-  - 🛡️ Protección de datos con Firebase Authentication
+---
 
-- **Gestión de Gastos (CRUD Completo)**
-  - ➕ Agregar nuevos gastos con nombre, categoría, monto y notas
-  - ✏️ Editar gastos existentes
-  - 🗑️ Eliminar gastos con confirmación
-  - 👁️ Visualizar historial completo
+## 📋 Información del Proyecto
 
-- **Análisis Financiero**
-  - 💵 Cálculo automático del total mensual
-  - 📊 Estadísticas por categoría con porcentajes
-  - 🔍 Filtrado por categoría
-  - 📅 Navegación entre meses (anterior/siguiente)
+**Universidad:** Universidad Don Bosco  
+**Materia:** Desarrollo de Software para Móviles (DSM104)  
+**Proyecto:** Segundo Proyecto en Android con Kotlin  
+**Ciclo:** 01-2025
 
-- **Categorías Predefinidas**
-  - 🍔 Alimentación
-  - 🚗 Transporte
-  - 🎮 Entretenimiento
-  - 🏥 Salud
-  - 📚 Educación
-  - 💡 Servicios
-  - 🏠 Hogar
-  - 👕 Ropa
-  - 💻 Tecnología
-  - 📦 Otros
+### 👥 Equipo de Desarrollo
 
-- **Experiencia de Usuario**
-  - 🎨 Diseño moderno con Material Design 3
-  - ⚡ Actualizaciones en tiempo real
-  - 📱 Interfaz intuitiva y responsive
-  - 🌙 Soporte para tema del sistema
-  - 💾 Cache local para uso offline
+| Nombre | Carnet |
+|--------|--------|
+| Fabricio Antonio Castro Martínez | CM240137 |
+| José Alonso Aguirre Márquez | AM241838 |
+| Ángel Marcelo Delgado Estrada | DE241507 |
 
-## 🛠️ Tecnologías Utilizadas
+---
 
-### Stack Principal
-- **Lenguaje:** Kotlin 2.1.0
-- **UI:** Jetpack Compose + Material 3
+## 📱 Descripción
+
+Aplicación Android nativa que facilita la organización y participación en eventos comunitarios locales. Los usuarios pueden crear, descubrir y participar en eventos de diversas categorías con un sistema completo de calificaciones y licencias Creative Commons.
+
+---
+
+## ✨ Características Principales
+
+### 🔐 Autenticación
+- Login con email/contraseña
+- Google Sign-In
+- Gestión segura con Firebase Authentication
+
+### 📅 Gestión de Eventos (CRUD)
+- Crear, editar, eliminar eventos
+- 10 categorías: Deportes, Cultura, Educación, Música, Arte, Gastronomía, Tecnología, Solidaridad, Medio Ambiente, Otros
+- Inscripción/desinscripción con límite de participantes
+- Navegación entre eventos próximos, propios e históricos
+
+### ⭐ Sistema de Calificaciones
+- Comentarios post-evento
+- Calificación de 1-5 estrellas
+- Promedio de calificaciones visible
+
+### 📜 Licencias Creative Commons
+- **7 licencias CC 4.0 implementadas:** CC BY, CC BY-SA, CC BY-NC, CC BY-NC-SA, CC BY-ND, CC BY-NC-ND, CC0
+- Selector intuitivo con información educativa
+- Visualización en cada evento
+- Enlaces a documentación oficial
+
+### 📱 Funcionalidades Adicionales
+- 🔔 Notificaciones push
+- 📅 Integración con calendario
+- 🔗 Compartir eventos en redes sociales
+- 🌙 Tema claro/oscuro
+- 💾 Cache local
+- ⚡ Actualizaciones en tiempo real
+
+---
+
+## 🛠️ Tecnologías
+
+- **Lenguaje:** Kotlin 2.0.21
+- **UI:** Jetpack Compose + Material Design 3
 - **Arquitectura:** MVVM (Model-View-ViewModel)
 - **Backend:** Firebase (Authentication + Firestore)
 - **Asíncronia:** Kotlin Coroutines + Flow
+- **SDK:** Min 24, Target 36
 
-### Bibliotecas y Dependencias
+---
 
-```kotlin
-// Android Core
-androidx.core:core-ktx:1.15.0
-androidx.lifecycle:lifecycle-runtime-ktx:2.8.7
-androidx.activity:activity-compose:1.9.3
+## 🚀 Instalación Rápida
 
-// Compose
-androidx.compose.bom:2024.12.01
-androidx.compose.ui
-androidx.compose.material3
-
-// Firebase
-firebase-bom:33.7.0
-firebase-auth-ktx
-firebase-firestore-ktx
-
-// Google Sign-In
-play-services-auth:21.2.0
-
-// Coroutines
-kotlinx-coroutines-play-services:1.9.0
-```
-
-## 📋 Requisitos
-
-- **Android Studio:** Hedgehog (2023.1.1) o superior
-- **SDK Mínimo:** API 24 (Android 7.0)
-- **SDK Objetivo:** API 36 (Android 14+)
-- **JDK:** Java 11
-- **Gradle:** 8.7.3
-- **Cuenta de Firebase** (gratuita)
-
-## 🚀 Instalación y Configuración
-
-### 1. Clonar el Repositorio
-
+### 1. Clonar Repositorio
 ```bash
-git clone https://github.com/tu-usuario/control-gastos.git
-cd control-gastos
+git clone https://github.com/tu-usuario/eventos-comunitarios.git
+cd eventos-comunitarios
 ```
 
 ### 2. Configurar Firebase
 
-#### 2.1 Crear Proyecto en Firebase
-
-1. Ve a [Firebase Console](https://console.firebase.google.com/)
-2. Haz clic en "Agregar proyecto"
-3. Sigue los pasos para crear tu proyecto
-
-#### 2.2 Agregar App Android
-
-1. En la consola de Firebase, selecciona tu proyecto
-2. Haz clic en el ícono de Android
-3. **Package name:** `com.example.controlgastos`
-4. **App nickname:** Control Gastos (opcional)
-5. Descarga el archivo `google-services.json`
-6. Coloca `google-services.json` en `app/google-services.json`
-
-#### 2.3 Habilitar Authentication
-
-1. En Firebase Console, ve a **Authentication** > **Sign-in method**
-2. Habilita **Email/Password**
-3. Habilita **Google**
-
-#### 2.4 Configurar Google Sign-In
-
-1. Abre la terminal en Android Studio
-2. Ejecuta para obtener el SHA-1:
-
-```bash
-./gradlew signingReport
-```
-
-O con keytool:
-
-```bash
-keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
-```
-
-3. Copia el SHA-1 que aparece
-4. En Firebase Console: **Project Settings** > **Your apps** > **Add fingerprint**
-5. Pega el SHA-1
-
-#### 2.5 Obtener Web Client ID
-
-1. En Firebase Console: **Authentication** > **Sign-in method** > **Google**
-2. Copia el **Web client ID**
-3. Pégalo en `app/src/main/res/values/strings.xml`:
-
-```xml
-<string name="default_web_client_id">TU_WEB_CLIENT_ID.apps.googleusercontent.com</string>
-```
-
-#### 2.6 Configurar Firestore
-
-1. En Firebase Console, ve a **Firestore Database**
-2. Haz clic en **Create database**
-3. Selecciona **Start in production mode**
-4. Elige la región más cercana
-5. Ve a la pestaña **Rules** y pega:
+1. Crear proyecto en [Firebase Console](https://console.firebase.google.com/)
+2. Agregar app Android con package: `com.example.eventoscomunitarios`
+3. Descargar `google-services.json` → `app/google-services.json`
+4. Habilitar **Authentication** (Email/Password y Google)
+5. Crear base de datos **Firestore**
+6. Configurar reglas de seguridad:
 
 ```javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    match /eventos/{eventoId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.resource.data.organizadorId == request.auth.uid;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.organizadorId;
       
-      match /gastos/{gastoId} {
-        allow read, write: if request.auth != null && request.auth.uid == userId;
-        
-        allow create: if request.auth != null 
-                      && request.auth.uid == userId
-                      && request.resource.data.keys().hasAll(['nombre', 'categoria', 'monto', 'fecha', 'nota', 'createdAt'])
-                      && request.resource.data.nombre is string
-                      && request.resource.data.categoria is string
-                      && request.resource.data.monto is number
-                      && request.resource.data.fecha is timestamp
-                      && request.resource.data.nota is string
-                      && request.resource.data.createdAt is timestamp;
+      match /comentarios/{comentarioId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null && request.resource.data.usuarioId == request.auth.uid;
+        allow delete: if request.auth != null && request.auth.uid == resource.data.usuarioId;
       }
     }
   }
 }
 ```
 
-6. Haz clic en **Publish**
+7. Obtener SHA-1 y agregarlo a Firebase:
+```bash
+./gradlew signingReport
+```
 
-#### 2.7 Crear Índices (Opcional pero recomendado)
+8. Copiar **Web Client ID** de Google Sign-In a `res/values/strings.xml`:
+```xml
+<string name="default_web_client_id">TU_CLIENT_ID.apps.googleusercontent.com</string>
+```
 
-1. Ve a **Firestore Database** > **Indexes** > **Composite**
-2. Haz clic en **Create index**
-3. Configura:
-   - **Collection ID:** `gastos`
-   - **Fields to index:**
-     - `fecha` - Descending
-   - **Query scope:** Collection
-
-### 3. Compilar y Ejecutar
+### 3. Ejecutar
 
 ```bash
-# Sincronizar proyecto
-./gradlew build
-
-# Ejecutar en emulador o dispositivo
-# Presiona el botón Run en Android Studio o usa:
+./gradlew clean build
 ./gradlew installDebug
 ```
 
-## 📁 Estructura del Proyecto
+O desde Android Studio: **Run** ▶️
+
+---
+
+## 📂 Estructura del Proyecto
 
 ```
-app/
-├── src/main/
-│   ├── java/com/example/controlgastos/
-│   │   ├── MainActivity.kt           # Activity principal con UI
-│   │   ├── ExpensesViewModel.kt      # Lógica de negocio y estados
-│   │   └── ui/theme/                 # Tema de la aplicación
-│   ├── res/
-│   │   ├── values/
-│   │   │   └── strings.xml           # Strings y Web Client ID
-│   │   └── ...
-│   └── AndroidManifest.xml           # Configuración de la app
-├── build.gradle.kts                   # Dependencias del módulo
-└── google-services.json              # Configuración de Firebase
+app/src/main/java/com/example/eventoscomunitarios/
+├── MainActivity.kt              # UI principal con Compose
+├── EventsViewModel.kt           # Lógica de negocio
+├── CreativeCommons.kt           # Modelo de licencias CC
+├── CreativeCommonsUI.kt         # Componentes UI de licencias
+└── ui/theme/                    # Tema, colores y tipografía
 ```
 
-## 🎯 Uso de la Aplicación
+### Estructura Firestore
 
-### Primera Vez
-
-1. **Crear Cuenta:**
-   - Abre la aplicación
-   - Ingresa email y contraseña
-   - Haz clic en "Crear cuenta"
-   
-   O usa "Continuar con Google"
-
-2. **Agregar tu Primer Gasto:**
-   - Haz clic en el botón flotante "Agregar Gasto"
-   - Completa el formulario
-   - Presiona "Agregar"
-
-### Gestión Diaria
-
-- **Ver gastos del mes actual:** Aparecen automáticamente al iniciar
-- **Cambiar de mes:** Usa las flechas ← → en el selector de mes
-- **Filtrar por categoría:** Haz clic en los chips de categoría
-- **Ver estadísticas:** Haz clic en el ícono de información (ℹ️)
-- **Editar un gasto:** Toca el ícono de lápiz en el gasto
-- **Eliminar un gasto:** Toca el ícono de basura y confirma
-
-## ⚙️ Configuración Avanzada
-
-### Optimizar Rendimiento
-
-En `gradle.properties`:
-
-```properties
-org.gradle.caching=true
-org.gradle.daemon=true
-org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=512m
-org.gradle.parallel=true
-kotlin.incremental=true
-android.enableR8.fullMode=true
+```javascript
+eventos/
+└── {eventoId}/
+    ├── titulo, descripcion, ubicacion, fecha
+    ├── categoria, organizador, organizadorId
+    ├── participantes: Array, maxParticipantes
+    ├── calificacionPromedio, totalCalificaciones
+    ├── licenciaCC: String              // Creative Commons
+    └── comentarios/{comentarioId}/
+        ├── usuarioId, nombreUsuario, comentario
+        ├── calificacion, fecha
 ```
 
-### Build Release
+---
 
-Para generar una APK optimizada:
+## 📜 Licencias Creative Commons
 
+Implementación completa del sistema CC 4.0 para proteger contenido de usuarios:
+
+| Licencia | Comercial | Modificar | Compartir Igual |
+|----------|-----------|-----------|-----------------|
+| CC BY | ✅ | ✅ | ❌ |
+| CC BY-SA | ✅ | ✅ | ✅ |
+| CC BY-NC | ❌ | ✅ | ❌ |
+| CC BY-NC-SA | ❌ | ✅ | ✅ |
+| CC BY-ND | ✅ | ❌ | ❌ |
+| CC BY-NC-ND | ❌ | ❌ | ❌ |
+| CC0 | ✅ | ✅ | ❌ |
+
+Cada evento incluye selector de licencia con información educativa y enlaces oficiales.
+
+---
+
+## 🎨 Paleta de Colores
+
+**Principales:**
+- Púrpura: `#6200EE`
+- Verde azulado: `#03DAC6`
+- Rosa coral: `#FF6B6B`
+
+**Por Categoría:**
+- 🏃 Deportes: `#4CAF50` | 🎭 Cultura: `#9C27B0` | 📚 Educación: `#2196F3`
+- 🎵 Música: `#E91E63` | 🎨 Arte: `#FF9800` | 🍽️ Gastronomía: `#FF5722`
+- 💻 Tecnología: `#00BCD4` | 🤝 Solidaridad: `#FFC107` | 🌱 Medio Ambiente: `#8BC34A`
+
+---
+
+## 🐛 Solución de Problemas
+
+**Firebase no inicializa:** Verifica `google-services.json` en `app/`  
+**Google Sign-In falla:** Confirma SHA-1 en Firebase y Web Client ID en strings.xml  
+**App lenta:** Usa modo Release y dispositivo físico  
+**Errores de compilación:** `./gradlew clean` + Invalidate Caches
+
+---
+
+## 📊 Estadísticas
+
+- **Líneas de código:** ~3,500
+- **Composables:** ~40
+- **Funciones ViewModel:** 15+
+- **Licencias CC:** 7
+
+---
+
+## 📞 Contacto
+
+**Universidad Don Bosco**  
+
+DSM104 - Desarrollo de Software para Móviles
+
+---
+
+## 🔄 Metodología de Trabajo - Scrum
+
+Este proyecto se desarrolló utilizando la metodología **Scrum** con sprints de 2 semanas.
+
+### 👥 Roles del Equipo
+
+| Integrante | Carnet | Rol Scrum | Responsabilidades |
+|------------|--------|-----------|-------------------|
+| **Fabricio Antonio Castro Martínez** | CM240137 | **Scrum Master / Backend Developer** | • Facilitar ceremonias Scrum<br>• Gestión de Firebase (Auth + Firestore)<br>• ViewModel y lógica de negocio<br>• Sistema de notificaciones |
+| **José Alonso Aguirre Márquez** | AM241838 | **Product Owner / Frontend Developer** | • Definir requisitos y prioridades<br>• UI/UX con Jetpack Compose<br>• Sistema de temas y colores<br>• Integración con Google Calendar |
+| **Ángel Marcelo Delgado Estrada** | DE241507 | **Developer / QA** | • Sistema de licencias Creative Commons<br>• Testing y validación<br>• Documentación técnica<br>• Sistema de calificaciones |
+
+### 📊 Gestión del Proyecto
+
+**Herramienta:** Trello / Notion (Metodología Kanban)
+
+🔗 **[Ver Tablero del Proyecto](https://trello.com/w/segundoproyectoenandroidconkotlin/home)**
+
+### 📅 Sprints Realizados
+
+#### Sprint 1 (Semana 1-2): Fundamentos
+- ✅ Configuración inicial del proyecto
+- ✅ Integración con Firebase
+- ✅ Sistema de autenticación
+- ✅ Estructura MVVM base
+
+#### Sprint 2 (Semana 3-4): CRUD de Eventos
+- ✅ Crear eventos
+- ✅ Listar eventos
+- ✅ Editar eventos
+- ✅ Eliminar eventos
+- ✅ Sistema de categorías
+
+#### Sprint 3 (Semana 5-6): Funcionalidades Avanzadas
+- ✅ Sistema de participación
+- ✅ Sistema de calificaciones
+- ✅ Notificaciones push
+- ✅ Integración con calendario
+
+#### Sprint 4 (Semana 7-8): Creative Commons y Pulido
+- ✅ Implementación de 7 licencias CC
+- ✅ UI/UX mejorado
+- ✅ Testing completo
+- ✅ Documentación final
+
+### 🎯 Ceremonias Scrum
+
+- **Daily Standup:** Lunes, Miércoles, Viernes (15 min)
+- **Sprint Planning:** Inicio de cada sprint (2 horas)
+- **Sprint Review:** Final de cada sprint (1 hora)
+- **Sprint Retrospective:** Final de cada sprint (1 hora)
+
+### 📋 Tablero Kanban
+
+Nuestro tablero está organizado en las siguientes columnas:
+
+1. **📝 Backlog** - Tareas pendientes
+2. **🎯 To Do** - Tareas planificadas para el sprint actual
+3. **🔨 In Progress** - Tareas en desarrollo
+4. **🧪 Testing** - Tareas en pruebas
+5. **✅ Done** - Tareas completadas
+
+---
+
+## 📖 Documentación Adicional
+
+Para más información sobre la implementación de licencias Creative Commons, consulta: [CREATIVE_COMMONS.md](CREATIVE_COMMONS.md)
+
+---
+
+## 🎯 Funcionalidades Destacadas
+
+### CRUD Completo
+✅ Crear, leer, actualizar y eliminar eventos  
+✅ Validación de formularios en tiempo real  
+✅ Confirmaciones de seguridad  
+
+### Sistema de Participación
+✅ Inscripción/desinscripción instantánea  
+✅ Control de capacidad máxima  
+✅ Notificaciones de cambios  
+
+### Calificaciones
+✅ Sistema de estrellas (1-5)  
+✅ Comentarios textuales  
+✅ Promedio visible para todos  
+
+### Creative Commons
+✅ 7 licencias oficiales CC 4.0  
+✅ Selector educativo con descripciones  
+✅ Visualización en todas las vistas  
+
+---
+
+## 🔧 Mantenimiento
+
+### Actualizar Dependencias
+```bash
+./gradlew dependencyUpdates
+```
+
+### Limpiar Proyecto
+```bash
+./gradlew clean
+./gradlew --refresh-dependencies
+```
+
+### Generar APK Firmada
 ```bash
 ./gradlew assembleRelease
 ```
 
-La APK estará en: `app/build/outputs/apk/release/`
+---
+
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT para el **código fuente**.  
+Las **licencias Creative Commons** aplican únicamente al **contenido generado por usuarios** (eventos).
+
+---
+
+<div align="center">
+
+**🎓 Universidad Don Bosco**  
+**Desarrollo de Software para Móviles (DSM104)**  
+
+
+⭐ Si te gustó el proyecto, dale una estrella ⭐
+
+</div> Basados en categoría de evento
+- 📊 **Barras de Progreso:** Visualización de participantes
+- ⭐ **Estrellas Interactivas:** Sistema de calificación visual
+
+---
+
+## 🧪 Testing
+
+### Unit Tests
+
+```bash
+./gradlew test
+```
+
+### Instrumentation Tests
+
+```bash
+./gradlew connectedAndroidTest
+```
+
+### Tests Incluidos
+
+- ✅ Validación de formularios
+- ✅ Lógica de inscripción/desinscripción
+- ✅ Cálculo de espacios disponibles
+- ✅ Sistema de calificaciones
+- ✅ Formateo de fechas
+
+---
 
 ## 🐛 Solución de Problemas
 
@@ -280,53 +389,141 @@ La APK estará en: `app/build/outputs/apk/release/`
 
 **Solución:** Verifica que `google-services.json` esté en `app/google-services.json`
 
-### Error: "Unable to resolve dependency for ':app@debug/compileClasspath'"
-
-**Solución:** 
-```bash
-./gradlew --refresh-dependencies
-File > Invalidate Caches / Restart
-```
-
-### Google Sign-In no funciona
-
-**Solución:** 
-1. Verifica que el SHA-1 esté agregado en Firebase
-2. Confirma que el Web Client ID sea correcto en `strings.xml`
-3. Asegúrate de que Google Sign-In esté habilitado en Firebase Console
-
-### La app es muy lenta
+### Error: Google Sign-In no funciona
 
 **Solución:**
-1. Prueba en modo Release, no Debug
-2. Usa un dispositivo físico en lugar del emulador
+1. Verifica que el SHA-1 esté en Firebase
+2. Confirma el Web Client ID en `strings.xml`
+3. Asegúrate de que Google Sign-In esté habilitado
+
+### La app es lenta
+
+**Solución:**
+1. Prueba en modo Release
+2. Usa un dispositivo físico
 3. Verifica tu conexión a internet
 4. Revisa que los índices de Firestore estén creados
 
-## 📊 Base de Datos (Firestore)
+### Errores de compilación
 
-### Estructura
+**Solución:**
+```bash
+# Limpiar caché
+./gradlew clean
+File > Invalidate Caches / Restart
 
-```
-users/
-└── {userId}/
-    └── gastos/
-        └── {gastoId}/
-            ├── nombre: String
-            ├── categoria: String
-            ├── monto: Number
-            ├── fecha: Timestamp
-            ├── nota: String
-            └── createdAt: Timestamp
+# Actualizar dependencias
+./gradlew --refresh-dependencies
 ```
 
-### Consultas Optimizadas
-
-- Cache local habilitado
-- Límite de 50 gastos por consulta
-- Índice compuesto en campo `fecha`
+---
 
 ## 🔐 Seguridad
 
-- ✅ Autenticación obligatoria para todos los endpoints
-- ✅ Reglas de
+### Medidas Implementadas
+
+- ✅ Autenticación obligatoria para todas las operaciones
+- ✅ Reglas de seguridad en Firestore
+- ✅ Validación en cliente y servidor
+- ✅ Encriptación de datos en tránsito (HTTPS)
+- ✅ Tokens de sesión seguros
+- ✅ No se exponen APIs keys sensibles
+
+### Reglas de Firestore
+
+Las reglas garantizan que:
+- Solo usuarios autenticados pueden acceder
+- Solo los organizadores pueden editar/eliminar sus eventos
+- Solo los participantes pueden calificar eventos
+- Validación de estructura de datos
+
+---
+
+## 📊 Métricas del Proyecto
+
+
+### Funcionalidades
+
+- ✅ CRUD completo de eventos
+- ✅ Sistema de autenticación
+- ✅ Sistema de participación
+- ✅ Sistema de calificaciones
+- ✅ Sistema de licencias CC
+- ✅ Notificaciones push
+- ✅ Compartir en redes
+- ✅ Integración con calendario
+
+---
+
+## 🚧 Roadmap Futuro
+
+### Funcionalidades Planeadas
+
+- [ ] 🗺️ Mapa de eventos cercanos (Google Maps)
+- [ ] 🔍 Búsqueda avanzada con filtros
+- [ ] 👤 Perfiles de usuario personalizados
+- [ ] 📸 Galería de fotos de eventos
+- [ ] 💬 Chat entre participantes
+- [ ] 🏆 Sistema de badges y logros
+- [ ] 📧 Notificaciones por email
+- [ ] 🌐 Versión web con sync
+- [ ] 📱 App para iOS
+- [ ] 🤖 Recomendaciones con IA
+
+### Mejoras Técnicas
+
+- [ ] Testing automatizado completo
+- [ ] CI/CD con GitHub Actions
+- [ ] Análisis de código con SonarQube
+- [ ] Optimización de rendimiento
+- [ ] Modo offline completo
+- [ ] Migración a Kotlin Multiplatform
+
+---
+
+
+
+---
+
+## 📄 Licencia del Proyecto
+
+Este proyecto está bajo la Licencia MIT - ver el archivo [LICENSE](LICENSE) para más detalles.
+
+### 📜 Sobre las Licencias Creative Commons
+
+Las licencias Creative Commons implementadas en esta aplicación son para el **contenido generado por los usuarios** (eventos), no para el código fuente de la aplicación.
+
+---
+
+## 🙏 Agradecimientos
+
+- **Universidad Don Bosco** - Por la formación académica
+- **Firebase** - Por los servicios backend
+- **Jetpack Compose** - Por el framework de UI moderno
+- **Creative Commons** - Por el sistema de licencias
+- **Material Design** - Por las guías de diseño
+- **Comunidad de Android** - Por la documentación y recursos
+
+---
+
+## 📞 Contacto
+
+### Equipo de Desarrollo
+
+- **Fabricio Castro** - CM240137
+- **José Alonso Aguirre** - AM241838
+- **Ángel Delgado** - DE241507
+
+### Universidad
+
+**Universidad Don Bosco**  
+
+Desarrollo de Software para Móviles (DSM104)
+
+---
+
+
+
+[⬆ Volver arriba](#-eventos-comunitarios)
+
+</div>
