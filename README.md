@@ -187,7 +187,7 @@ Cada evento incluye selector de licencia con información educativa y enlaces of
 
 ---
 
-## 🎨 Paleta de Colores
+## 🎨 Paleta de Colores:
 
 **Principales:**
 - Púrpura: `#6200EE`
