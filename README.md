@@ -15,7 +15,7 @@
 
 ## 📋 Información del Proyecto
 
-**Universidad:** Universidad Don Bosco  
+**Universidad:** Universidad Don Bosco. 
 **Materia:** Desarrollo de Software para Móviles (DSM104)  
 **Proyecto:** Segundo Proyecto en Android con Kotlin  
 **Ciclo:** 01-2025
