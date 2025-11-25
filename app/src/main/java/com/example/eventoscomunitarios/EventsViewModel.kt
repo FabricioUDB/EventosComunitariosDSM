@@ -1,3 +1,14 @@
+/**
+ * Crea un nuevo evento en Firestore.
+ *
+ * Flujo de la función:
+ * 1. Valida que los campos obligatorios del evento no estén vacíos.
+ * 2. Asigna el ID del usuario autenticado como organizador.
+ * 3. Envía los datos a la colección `eventos` en Firestore.
+ * 4. Actualiza el estado de UI con éxito o error.
+ *
+ * @param evento Objeto que contiene los datos del nuevo evento.
+ */
 package com.example.eventoscomunitarios
 
 import androidx.lifecycle.ViewModel

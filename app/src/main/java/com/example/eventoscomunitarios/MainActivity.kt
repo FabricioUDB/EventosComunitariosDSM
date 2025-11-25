@@ -1,3 +1,11 @@
+/**
+ * Activity principal de la aplicación de eventos comunitarios.
+ *
+ * Responsabilidades:
+ * - Inicializar la navegación principal.
+ * - Escuchar el estado de autenticación del usuario.
+ * - Mostrar las pantallas de login o de eventos según corresponda.
+ */
 package com.example.eventoscomunitarios
 
 import android.Manifest
